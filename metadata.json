@@ -1,0 +1,5 @@
+{
+  "name": "ShaderMind",
+  "description": "A KodeLife-inspired, AI-powered live shader editor with multi-pass rendering and ping-pong buffers.",
+  "requestFramePermissions": []
+}
