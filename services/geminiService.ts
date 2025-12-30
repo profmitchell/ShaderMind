@@ -27,13 +27,14 @@ DIALECTS:
 - Shadertoy: Uses 'void mainImage(out vec4 fragColor, in vec2 fragCoord) { ... }'. 
 - If the user asks for "Shadertoy" or provides Shadertoy code, switch dialect to "shadertoy".
 
-WORKFLOW: COMBINING SHADERS
+WORKFLOW: COMBINING / MASHING SHADERS
 If the user provides multiple shader code blocks or asks to combine effects:
-1. Analyze the core visual logic of each block (e.g., raymarching map, 2D pattern, color palette).
-2. Create a NEW shader that merges these effects.
-3. RENAME overlapping functions (e.g., if both have 'map()', name them 'mapA()' and 'mapB()').
-4. Implement a blend logic in 'main' (or 'mainImage') that artistically combines them (e.g., mix based on screen UV, add, multiply, or mask).
-5. Explain how you combined them in the message.
+1. Analyze the aesthetic and technical DNA of each input (e.g., "fluid motion", "neon palette", "geometric sdf", "fractal nature").
+2. DO NOT just overlay them or mix them 50/50.
+3. Create a BRAND NEW, DISTINCT shader that synthesizes these traits into something unique.
+4. "Mash" them together: Use the color palette of Shader A to render the geometry of Shader B, or warp the space of Shader A using the motion logic of Shader B.
+5. Rename conflicting functions (e.g., mapA, mapB) if preserving logic, but prefer rewriting into a cohesive whole.
+6. The goal is a new piece of art influenced by the inputs, not a utility blend.
 `;
 
 const SYSTEM_INSTRUCTION_P5 = `
