@@ -30,6 +30,50 @@ void main() {
     fragColor = vec4(col, 1.0);
 }`;
 
+export const DEFAULT_SHADERTOY_CODE = `// Shadertoy "Image" shader
+// Inputs: iResolution, iTime, iMouse, iChannel0...3
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = fragCoord/iResolution.xy;
+
+    // Time varying pixel color
+    vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
+
+    // Output to screen
+    fragColor = vec4(col,1.0);
+}`;
+
+export const SHADERTOY_PRELUDE = `#version 300 es
+precision highp float;
+
+uniform vec3 iResolution;
+uniform float iTime;
+uniform float iTimeDelta;
+uniform float iFrame;
+uniform vec4 iMouse;
+uniform vec4 iDate;
+uniform float iSampleRate;
+uniform vec3 iChannelResolution[4];
+
+uniform sampler2D iChannel0;
+uniform sampler2D iChannel1;
+uniform sampler2D iChannel2;
+uniform sampler2D iChannel3;
+
+out vec4 fragColor;
+
+// Compatibility defines
+#define texture2D texture
+`;
+
+export const SHADERTOY_SUFFIX = `
+void main() {
+    mainImage(fragColor, gl_FragCoord.xy);
+    fragColor.a = 1.0; // Force alpha to 1 for screen
+}
+`;
+
 export const DEFAULT_BUFFER_SHADER = `#version 300 es
 precision highp float;
 

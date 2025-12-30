@@ -1,7 +1,7 @@
 import React, { useRef, useLayoutEffect, useEffect } from 'react';
 import { useStore } from '../store';
-import { ShaderPass, PassType } from '../types';
-import { VERTEX_SHADER_DEFAULT } from '../constants';
+import { ShaderPass, PassType, GlslDialect } from '../types';
+import { VERTEX_SHADER_DEFAULT, SHADERTOY_PRELUDE, SHADERTOY_SUFFIX } from '../constants';
 
 class Renderer {
   gl: WebGL2RenderingContext;
@@ -11,6 +11,7 @@ class Renderer {
   canvas: HTMLCanvasElement;
   width: number = 800;
   height: number = 600;
+  dialect: GlslDialect = 'standard';
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -18,6 +19,10 @@ class Renderer {
     if (!gl) throw new Error("WebGL2 not supported");
     this.gl = gl;
     gl.getExtension('EXT_color_buffer_float');
+  }
+
+  setDialect(d: GlslDialect) {
+    this.dialect = d;
   }
 
   resize(w: number, h: number) {
@@ -73,8 +78,15 @@ class Renderer {
 
   updateProgram(id: string, fragSrc: string) {
     const gl = this.gl;
+    
+    // Wrap shader if in Shadertoy mode
+    let finalFragSrc = fragSrc;
+    if (this.dialect === 'shadertoy') {
+       finalFragSrc = `${SHADERTOY_PRELUDE}\n${fragSrc}\n${SHADERTOY_SUFFIX}`;
+    }
+
     const vs = this.compileShader(VERTEX_SHADER_DEFAULT, gl.VERTEX_SHADER);
-    const fs = this.compileShader(fragSrc, gl.FRAGMENT_SHADER);
+    const fs = this.compileShader(finalFragSrc, gl.FRAGMENT_SHADER);
     if (!vs || !fs) return false;
 
     const prog = gl.createProgram()!;
@@ -112,12 +124,22 @@ class Renderer {
       gl.uniform3f(gl.getUniformLocation(prog, "iResolution"), this.width, this.height, 1.0);
       gl.uniform1f(gl.getUniformLocation(prog, "iTime"), time);
       gl.uniform1f(gl.getUniformLocation(prog, "iTimeDelta"), dt);
-      gl.uniform1i(gl.getUniformLocation(prog, "iFrame"), frame);
+      gl.uniform1f(gl.getUniformLocation(prog, "iFrame"), frame); // Shadertoy expects float, renderer usually ints, standardizing on float here
       gl.uniform4f(gl.getUniformLocation(prog, "iMouse"), mouse[0], mouse[1], mouse[2], mouse[3]);
+      
+      // Additional Shadertoy uniforms
+      const d = new Date();
+      gl.uniform4f(gl.getUniformLocation(prog, "iDate"), d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()*3600 + d.getMinutes()*60 + d.getSeconds());
+      gl.uniform1f(gl.getUniformLocation(prog, "iSampleRate"), 44100.0);
 
       [0, 1, 2, 3].forEach(ch => {
         const input = pass.inputs[ch];
         gl.uniform1i(gl.getUniformLocation(prog, `iChannel${ch}`), ch);
+        
+        // Pass resolution for this channel
+        const resLoc = gl.getUniformLocation(prog, `iChannelResolution[${ch}]`);
+        if(resLoc) gl.uniform3f(resLoc, this.width, this.height, 1.0); // Assume internal buffers match screen for now
+
         gl.activeTexture(gl.TEXTURE0 + ch);
         if (input && input.type === 'pass' && input.id) {
           const sourceBuf = this.buffers.get(input.id);
@@ -156,7 +178,7 @@ const ShaderCanvas: React.FC = () => {
   const animationFrameRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
 
-  const { passes, time, resolution, mouse, isPlaying, incrementTime, setMouse } = useStore();
+  const { passes, time, resolution, mouse, isPlaying, incrementTime, setMouse, glslDialect } = useStore();
 
   useLayoutEffect(() => {
     if (!canvasRef.current) return;
@@ -164,6 +186,15 @@ const ShaderCanvas: React.FC = () => {
       rendererRef.current = new Renderer(canvasRef.current);
     } catch (e) { console.error(e); }
   }, []);
+
+  // Sync Dialect
+  useEffect(() => {
+    if (rendererRef.current) {
+        rendererRef.current.setDialect(glslDialect);
+        // Recompile all passes when dialect changes
+        passes.forEach(p => rendererRef.current!.updateProgram(p.id, p.fragmentShader));
+    }
+  }, [glslDialect, passes]);
 
   useEffect(() => {
     if (!rendererRef.current) return;
@@ -217,7 +248,7 @@ const ShaderCanvas: React.FC = () => {
         onMouseUp={handleMouseUp}
       />
       <div className="absolute top-2 left-2 text-xs text-white/50 font-mono pointer-events-none">
-        {Math.round(1/0.016)} FPS | GLSL | t={time.toFixed(2)}
+        {Math.round(1/0.016)} FPS | GLSL {glslDialect === 'shadertoy' ? '(Shadertoy)' : '(Standard)'} | t={time.toFixed(2)}
       </div>
     </div>
   );

@@ -5,10 +5,10 @@ import AIAssistant from './components/AIAssistant';
 import CodeEditor from './components/CodeEditor';
 import { useStore } from './store';
 import { EditorMode } from './types';
-import { Play, Pause, Save, FolderOpen, Layout, MessageSquare, Code2, MonitorPlay, Zap, Palette } from 'lucide-react';
+import { Play, Pause, Save, FolderOpen, Layout, MessageSquare, Code2, MonitorPlay, Zap, Palette, FileCode } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { passes, selectedPassId, updatePassCode, isPlaying, togglePlay, mode, setMode, p5Code, setP5Code } = useStore();
+  const { passes, selectedPassId, updatePassCode, isPlaying, togglePlay, mode, setMode, p5Code, setP5Code, glslDialect, setGlslDialect } = useStore();
   const selectedPass = passes.find(p => p.id === selectedPassId);
 
   // Responsive State
@@ -82,12 +82,31 @@ const App: React.FC = () => {
           <div className="h-6 w-[1px] bg-white/10 hidden sm:block"></div>
           
           {isShaderMode && (
-            <button 
-              onClick={togglePlay} 
-              className={`p-2 rounded-full transition-all ${isPlaying ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}
-            >
-              {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
-            </button>
+            <>
+              <div className="flex bg-[#2c2c2e] p-0.5 rounded-lg border border-white/5 items-center">
+                 <button 
+                   onClick={() => setGlslDialect('standard')}
+                   className={`px-2 py-1 rounded text-[10px] font-medium transition-all ${glslDialect === 'standard' ? 'bg-[#444] text-white' : 'text-gray-400 hover:text-white'}`}
+                   title="Standard GLSL ES 3.0 (void main)"
+                 >
+                   Standard
+                 </button>
+                 <button 
+                   onClick={() => setGlslDialect('shadertoy')}
+                   className={`px-2 py-1 rounded text-[10px] font-medium transition-all ${glslDialect === 'shadertoy' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                   title="Shadertoy format (void mainImage)"
+                 >
+                   Shadertoy
+                 </button>
+              </div>
+              <div className="h-6 w-[1px] bg-white/10 hidden sm:block"></div>
+              <button 
+                onClick={togglePlay} 
+                className={`p-2 rounded-full transition-all ${isPlaying ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}
+              >
+                {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
+              </button>
+            </>
           )}
         </div>
         
@@ -125,13 +144,14 @@ const App: React.FC = () => {
               {/* Top Half: Code Editor */}
               <div className="flex-[3] flex flex-col min-h-0 border-b border-white/10">
                  <div className="h-10 bg-[#2c2c2e] flex items-center px-4 text-xs font-medium text-gray-400 border-b border-white/5 justify-between">
-                    <span>
+                    <span className="flex items-center gap-2">
+                      <FileCode size={12} />
                       {isShaderMode 
                         ? (selectedPass ? `${selectedPass.name}.glsl` : "No selection") 
                         : "sketch.js"}
                     </span>
-                    <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded">
-                      {isShaderMode ? "GLSL ES 3.0" : "P5.js"}
+                    <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-blue-300">
+                      {isShaderMode ? (glslDialect === 'shadertoy' ? "void mainImage()" : "void main()") : "P5.js"}
                     </span>
                  </div>
                  <div className="flex-1 relative overflow-hidden">
@@ -173,8 +193,13 @@ const App: React.FC = () => {
             
             {activeTab === 'code' && (
               <div className="absolute inset-0 z-20 bg-[#1e1e1e] flex flex-col">
-                 <div className="h-10 bg-[#2c2c2e] flex items-center px-4 text-xs font-medium text-gray-400 border-b border-white/5">
-                   {isShaderMode ? (selectedPass ? `${selectedPass.name}.glsl` : "Select a pass") : "sketch.js"}
+                 <div className="h-10 bg-[#2c2c2e] flex items-center px-4 text-xs font-medium text-gray-400 border-b border-white/5 justify-between">
+                   <span>
+                      {isShaderMode ? (selectedPass ? `${selectedPass.name}.glsl` : "Select a pass") : "sketch.js"}
+                   </span>
+                   <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-blue-300">
+                      {isShaderMode ? (glslDialect === 'shadertoy' ? "mainImage" : "main") : "P5"}
+                   </span>
                  </div>
                  <div className="flex-1 relative">
                   {isShaderMode && selectedPass ? (

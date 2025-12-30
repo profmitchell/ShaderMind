@@ -8,6 +8,8 @@ export enum EditorMode {
   P5 = 'p5'
 }
 
+export type GlslDialect = 'standard' | 'shadertoy';
+
 export interface ShaderPass {
   id: string;
   name: string;
@@ -25,6 +27,7 @@ export interface ShaderPass {
 
 export interface ProjectState {
   mode: EditorMode;
+  glslDialect: GlslDialect;
   p5Code: string;
   passes: ShaderPass[];
   selectedPassId: string;
@@ -37,13 +40,13 @@ export interface ProjectState {
 }
 
 export interface AIAction {
-  type: "SET_SHADER_CODE" | "CREATE_PASS" | "DELETE_PASS" | "SET_CONNECTION" | "SET_FEEDBACK" | "SELECT_PASS" | "SET_P5_CODE";
+  type: "SET_SHADER_CODE" | "CREATE_PASS" | "DELETE_PASS" | "SET_CONNECTION" | "SET_FEEDBACK" | "SELECT_PASS" | "SET_P5_CODE" | "SET_GLSL_DIALECT";
   payload: any;
 }
 
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
-  images?: string[]; // Base64 strings
+  attachments?: string[]; // Base64 Data URIs (images or videos)
   timestamp: number;
 }

@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { ProjectState, ShaderPass, PassType, AIAction, EditorMode } from './types';
-import { INITIAL_PASSES, DEFAULT_BUFFER_SHADER, DEFAULT_P5_CODE } from './constants';
+import { ProjectState, ShaderPass, PassType, AIAction, EditorMode, GlslDialect } from './types';
+import { INITIAL_PASSES, DEFAULT_BUFFER_SHADER, DEFAULT_P5_CODE, DEFAULT_SHADERTOY_CODE, DEFAULT_IMAGE_SHADER } from './constants';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AppStore extends ProjectState {
   setMode: (mode: EditorMode) => void;
+  setGlslDialect: (dialect: GlslDialect) => void;
   setP5Code: (code: string) => void;
   setResolution: (w: number, h: number) => void;
   setMouse: (x: number, y: number, cx: number, cy: number) => void;
@@ -22,6 +23,7 @@ interface AppStore extends ProjectState {
 
 export const useStore = create<AppStore>((set, get) => ({
   mode: EditorMode.SHADER,
+  glslDialect: 'standard',
   p5Code: DEFAULT_P5_CODE,
   passes: INITIAL_PASSES,
   selectedPassId: 'image_pass',
@@ -33,6 +35,24 @@ export const useStore = create<AppStore>((set, get) => ({
   frameCount: 0,
 
   setMode: (mode) => set({ mode }),
+  
+  setGlslDialect: (dialect) => set((state) => {
+    // When switching dialects, we optionally reset the code of the main image pass to a template
+    // to prevent immediate confusion, or we leave it. 
+    // For a smoother UX, let's update the Image pass if it's the default one.
+    const newPasses = state.passes.map(p => {
+       if (p.type === PassType.IMAGE) {
+         if (dialect === 'shadertoy' && p.fragmentShader.includes('void main()')) {
+            return { ...p, fragmentShader: DEFAULT_SHADERTOY_CODE };
+         } else if (dialect === 'standard' && p.fragmentShader.includes('void mainImage')) {
+            return { ...p, fragmentShader: DEFAULT_IMAGE_SHADER };
+         }
+       }
+       return p;
+    });
+    return { glslDialect: dialect, passes: newPasses };
+  }),
+
   setP5Code: (code) => set({ p5Code: code }),
   setResolution: (w, h) => set({ resolution: [w, h] }),
   setMouse: (x, y, cx, cy) => set({ mouse: [x, y, cx, cy] }),
@@ -53,7 +73,7 @@ export const useStore = create<AppStore>((set, get) => ({
       id: newId,
       name: name || `Buffer ${state.passes.length}`,
       type: PassType.BUFFER,
-      fragmentShader: DEFAULT_BUFFER_SHADER,
+      fragmentShader: state.glslDialect === 'shadertoy' ? DEFAULT_SHADERTOY_CODE : DEFAULT_BUFFER_SHADER,
       active: true,
       inputs: { 0: { type: null, id: null }, 1: { type: null, id: null }, 2: { type: null, id: null }, 3: { type: null, id: null } },
       feedback: feedback
@@ -88,6 +108,7 @@ export const useStore = create<AppStore>((set, get) => ({
 
   loadProject: (project) => set({
     mode: project.mode || EditorMode.SHADER,
+    glslDialect: project.glslDialect || 'standard',
     p5Code: project.p5Code || DEFAULT_P5_CODE,
     passes: project.passes,
     selectedPassId: project.selectedPassId,
@@ -99,6 +120,9 @@ export const useStore = create<AppStore>((set, get) => ({
     const state = get();
     console.log("Applying AI Action:", action);
     switch (action.type) {
+      case "SET_GLSL_DIALECT":
+        state.setGlslDialect(action.payload.dialect);
+        break;
       case "SET_P5_CODE":
         state.setP5Code(action.payload.code);
         break;
